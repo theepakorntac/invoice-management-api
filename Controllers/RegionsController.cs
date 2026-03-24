@@ -1,51 +1,69 @@
 ﻿using invoice_management_api.DTOs;
-using InvoiceManagementDB;
-using InvoiceManagementDB.Models;
+using invoice_management_api.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
-[Route("api/[controller]")]
 [ApiController]
+[Route("api/[controller]")]
 public class RegionsController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IRegionService _service;
 
-    public RegionsController(AppDbContext context) => _context = context;
-
-    // GET: api/Regions
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<RegionResponseDTO>>> GetRegions()
+    public RegionsController(IRegionService service)
     {
-        var regions = await _context.Regions.ToListAsync();
-
-        // Map Model -> ResponseDTO
-        return Ok(regions.Select(r => new RegionResponseDTO
-        {
-            RegionID = r.RegionID,
-            RegionName = r.RegionName
-        }));
+        _service = service;
     }
 
-    // POST: api/Regions
-    [HttpPost]
-    public async Task<ActionResult<RegionResponseDTO>> PostRegion(RegionCreateDTO regionDto)
+    [HttpGet]
+    public async Task<IActionResult> Get()
     {
-        // 1. Map CreateDTO -> Model
-        var region = new Region
+        return Ok(await _service.GetAllAsync());
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var data = await _service.GetByIdAsync(id);
+        if (data == null) return NotFound();
+
+        return Ok(data);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create(RegionCreate req)
+    {
+        try
         {
-            RegionName = regionDto.RegionName
-        };
-
-        _context.Regions.Add(region);
-        await _context.SaveChangesAsync();
-
-        // 2. Map Model -> ResponseDTO (เพื่อส่งค่าที่มี ID กลับไปให้ User)
-        var response = new RegionResponseDTO
+            var id = await _service.CreateAsync(req);
+            return CreatedAtAction(nameof(GetById), new { id }, null);
+        }
+        catch (ArgumentException ex)
         {
-            RegionID = region.RegionID,
-            RegionName = region.RegionName
-        };
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 
-        return CreatedAtAction(nameof(GetRegions), new { id = response.RegionID }, response);
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, RegionUpdate req)
+    {
+        try
+        {
+            var ok = await _service.UpdateAsync(id, req);
+            if (!ok) return NotFound();
+
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var ok = await _service.DeleteAsync(id);
+        if (!ok) return NotFound();
+
+        return NoContent();
     }
 }
