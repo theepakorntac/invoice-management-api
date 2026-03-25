@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace InvoiceManagementDB.Models;
 
@@ -13,5 +14,6 @@ public class Supplier
     public string? ContactEmail { get; set; }
     public int CompanyID { get; set; }
     [ForeignKey("CompanyID")]
+    [JsonIgnore]
     public Company? Company { get; set; }
 }
