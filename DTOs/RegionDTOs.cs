@@ -6,13 +6,7 @@ public class RegionResponse
     public string RegionName { get; set; } = string.Empty;
 }
 
-public class RegionUpdate
+public class RegionRequest
 {
     public string RegionName { get; set; } = string.Empty;
 }
-
-public class RegionCreate
-{
-    public string RegionName { get; set; } = string.Empty;
-}
-

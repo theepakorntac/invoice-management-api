@@ -1,69 +1,108 @@
-﻿using invoice_management_api.DTOs;
-using invoice_management_api.Services;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using InvoiceManagementDB;
+using InvoiceManagementDB.Models;
 
-[ApiController]
-[Route("api/[controller]")]
-public class RegionsController : ControllerBase
+namespace invoice_management_api.Controllers
 {
-    private readonly IRegionService _service;
-
-    public RegionsController(IRegionService service)
+    [Route("api/[controller]")]
+    [ApiController]
+    public class RegionsController : ControllerBase
     {
-        _service = service;
-    }
+        private readonly AppDbContext _context;
 
-    [HttpGet]
-    public async Task<IActionResult> Get()
-    {
-        return Ok(await _service.GetAllAsync());
-    }
-
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
-    {
-        var data = await _service.GetByIdAsync(id);
-        if (data == null) return NotFound();
-
-        return Ok(data);
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> Create(RegionCreate req)
-    {
-        try
+        public RegionsController(AppDbContext context)
         {
-            var id = await _service.CreateAsync(req);
-            return CreatedAtAction(nameof(GetById), new { id }, null);
+            _context = context;
         }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, RegionUpdate req)
-    {
-        try
+        // GET: api/Regions
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Region>>> GetRegions()
         {
-            var ok = await _service.UpdateAsync(id, req);
-            if (!ok) return NotFound();
+            return await _context.Regions.ToListAsync();
+        }
+
+        // GET: api/Regions/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Region>> GetRegion(int id)
+        {
+            var region = await _context.Regions.FindAsync(id);
+
+            if (region == null)
+            {
+                return NotFound();
+            }
+
+            return region;
+        }
+
+        // PUT: api/Regions/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutRegion(int id, Region region)
+        {
+            if (id != region.RegionID)
+            {
+                return BadRequest();
+            }
+
+            _context.Entry(region).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!RegionExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
 
             return NoContent();
         }
-        catch (ArgumentException ex)
+
+        // POST: api/Regions
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPost]
+        public async Task<ActionResult<Region>> PostRegion(Region region)
         {
-            return BadRequest(new { message = ex.Message });
+            _context.Regions.Add(region);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetRegion", new { id = region.RegionID }, region);
         }
-    }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
-    {
-        var ok = await _service.DeleteAsync(id);
-        if (!ok) return NotFound();
+        // DELETE: api/Regions/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteRegion(int id)
+        {
+            var region = await _context.Regions.FindAsync(id);
+            if (region == null)
+            {
+                return NotFound();
+            }
 
-        return NoContent();
+            _context.Regions.Remove(region);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private bool RegionExists(int id)
+        {
+            return _context.Regions.Any(e => e.RegionID == id);
+        }
     }
 }

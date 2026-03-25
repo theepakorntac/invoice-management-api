@@ -1,8 +1,11 @@
+//using invoice_management_api.Services;
 using InvoiceManagementDB;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//builder.Services.AddScoped<IRegionService, RegionService>();
+//builder.Services.AddScoped<IProvinceService, ProvinceService>();
 // Add services to the container.
 
 builder.Services.AddControllers();
