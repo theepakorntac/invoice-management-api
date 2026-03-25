@@ -1,8 +1,7 @@
-﻿using InvoiceManagementDB;
+﻿using invoice_management_api.Interfaces;
+using invoice_management_api.Models;
 using InvoiceManagementDB.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 
 namespace invoice_management_api.Controllers
 {
@@ -10,77 +9,43 @@ namespace invoice_management_api.Controllers
     [ApiController]
     public class OrderItemsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IOrderItemService _itemService;
+        public OrderItemsController(IOrderItemService itemService) => _itemService = itemService;
 
-        public OrderItemsController(AppDbContext context)
+        [HttpGet] // GET ALL
+        public async Task<ActionResult<IEnumerable<OrderItem>>> GetAll()
+            => Ok(await _itemService.GetAllAsync());
+
+        [HttpGet("{id}")] // GET BY ID
+        public async Task<ActionResult<OrderItem>> GetById(int id)
         {
-            _context = context;
+            var item = await _itemService.GetByIdAsync(id);
+            return item == null ? NotFound() : Ok(item);
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<OrderItem>>> GetOrderItems()
+        //[HttpGet("order/{orderId}")] // GET BY ORDER ID
+        //public async Task<ActionResult<IEnumerable<OrderItem>>> GetByOrder(int orderId)
+        //    => Ok(await _itemService.GetByOrderIdAsync(orderId));
+
+        [HttpPost] // CREATE
+        public async Task<ActionResult> Create(OrderItem item)
         {
-            return await _context.OrderItems
-                .FromSqlRaw("EXEC sp_GetAllOrderItems")
-                .ToListAsync();
+            await _itemService.CreateAsync(item);
+            return Ok(item);
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<OrderItem>> GetOrderItem(int id)
+        [HttpPut("{id}")] // UPDATE
+        public async Task<IActionResult> Update(int id, OrderItem item)
         {
-            var idParam = new SqlParameter("@ItemID", id);
-            var items = await _context.OrderItems
-                .FromSqlRaw("EXEC sp_GetOrderItemById @ItemID", idParam)
-                .ToListAsync();
-
-            var item = items.FirstOrDefault();
-            if (item == null) return NotFound();
-            return item;
+            var result = await _itemService.UpdateAsync(id, item);
+            return result == 0 ? NotFound() : NoContent();
         }
 
-        [HttpPost]
-        public async Task<ActionResult<OrderItem>> PostOrderItem(OrderItem orderItem)
+        [HttpDelete("{id}")] // DELETE
+        public async Task<IActionResult> Delete(int id)
         {
-            var p1 = new SqlParameter("@OrderID", orderItem.OrderID);
-            var p2 = new SqlParameter("@ProductID", orderItem.ProductID);
-            var p3 = new SqlParameter("@Quantity", orderItem.Quantity);
-            var p4 = new SqlParameter("@UnitPrice", orderItem.UnitPrice);
-
-            await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_InsertOrderItem @OrderID, @ProductID, @Quantity, @UnitPrice",
-                p1, p2, p3, p4);
-
-            return Ok(orderItem);
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutOrderItem(int id, OrderItem orderItem)
-        {
-            if (id != orderItem.ItemID) return BadRequest();
-
-            var p0 = new SqlParameter("@ItemID", id);
-            var p1 = new SqlParameter("@OrderID", orderItem.OrderID);
-            var p2 = new SqlParameter("@ProductID", orderItem.ProductID);
-            var p3 = new SqlParameter("@Quantity", orderItem.Quantity);
-            var p4 = new SqlParameter("@UnitPrice", orderItem.UnitPrice);
-
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_UpdateOrderItem @ItemID, @OrderID, @ProductID, @Quantity, @UnitPrice",
-                p0, p1, p2, p3, p4);
-
-            if (rowsAffected == 0) return NotFound();
-            return NoContent();
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteOrderItem(int id)
-        {
-            var idParam = new SqlParameter("@ItemID", id);
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_DeleteOrderItem @ItemID", idParam);
-
-            if (rowsAffected == 0) return NotFound();
-            return NoContent();
+            var result = await _itemService.DeleteAsync(id);
+            return result == 0 ? NotFound() : NoContent();
         }
     }
 }

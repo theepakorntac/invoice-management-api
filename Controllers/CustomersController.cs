@@ -1,8 +1,7 @@
-﻿using InvoiceManagementDB;
+﻿using invoice_management_api.Interfaces;
+using invoice_management_api.Models;
 using InvoiceManagementDB.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 
 namespace invoice_management_api.Controllers
 {
@@ -10,47 +9,28 @@ namespace invoice_management_api.Controllers
     [ApiController]
     public class CustomersController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ICustomerService _customerService;
 
-        public CustomersController(AppDbContext context)
+        public CustomersController(ICustomerService customerService)
         {
-            _context = context;
+            _customerService = customerService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Customer>>> GetCustomers()
-        {
-            return await _context.Customers
-                .FromSqlRaw("EXEC sp_GetAllCustomers")
-                .ToListAsync();
-        }
+        public async Task<ActionResult<IEnumerable<Customer>>> GetCustomers() =>
+            Ok(await _customerService.GetAllAsync());
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Customer>> GetCustomer(int id)
         {
-            var idParam = new SqlParameter("@CustomerID", id);
-            var customers = await _context.Customers
-                .FromSqlRaw("EXEC sp_GetCustomerById @CustomerID", idParam)
-                .ToListAsync();
-
-            var customer = customers.FirstOrDefault();
-            if (customer == null) return NotFound();
-            return customer;
+            var customer = await _customerService.GetByIdAsync(id);
+            return customer == null ? NotFound() : Ok(customer);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Customer>> PostCustomer(Customer customer)
+        public async Task<ActionResult> PostCustomer(Customer customer)
         {
-            var p1 = new SqlParameter("@FirstName", customer.FirstName);
-            var p2 = new SqlParameter("@LastName", customer.LastName);
-            var p3 = new SqlParameter("@Email", customer.Email);
-            var p4 = new SqlParameter("@Phone", (object?)customer.Phone ?? DBNull.Value);
-            var p5 = new SqlParameter("@CityID", customer.CityID);
-
-            await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_InsertCustomer @FirstName, @LastName, @Email, @Phone, @CityID",
-                p1, p2, p3, p4, p5);
-
+            await _customerService.CreateAsync(customer);
             return Ok(customer);
         }
 
@@ -58,31 +38,15 @@ namespace invoice_management_api.Controllers
         public async Task<IActionResult> PutCustomer(int id, Customer customer)
         {
             if (id != customer.CustomerID) return BadRequest();
-
-            var p0 = new SqlParameter("@CustomerID", id);
-            var p1 = new SqlParameter("@FirstName", customer.FirstName);
-            var p2 = new SqlParameter("@LastName", customer.LastName);
-            var p3 = new SqlParameter("@Email", customer.Email);
-            var p4 = new SqlParameter("@Phone", (object?)customer.Phone ?? DBNull.Value);
-            var p5 = new SqlParameter("@CityID", customer.CityID);
-
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_UpdateCustomer @CustomerID, @FirstName, @LastName, @Email, @Phone, @CityID",
-                p0, p1, p2, p3, p4, p5);
-
-            if (rowsAffected == 0) return NotFound();
-            return NoContent();
+            var rowsAffected = await _customerService.UpdateAsync(id, customer);
+            return rowsAffected == 0 ? NotFound() : NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCustomer(int id)
         {
-            var idParam = new SqlParameter("@CustomerID", id);
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_DeleteCustomer @CustomerID", idParam);
-
-            if (rowsAffected == 0) return NotFound();
-            return NoContent();
+            var rowsAffected = await _customerService.DeleteAsync(id);
+            return rowsAffected == 0 ? NotFound() : NoContent();
         }
     }
 }

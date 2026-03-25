@@ -1,8 +1,7 @@
-﻿using InvoiceManagementDB;
-using InvoiceManagementDB.Models; // ตรวจสอบชื่อ Namespace ให้ตรงกับโปรเจกต์คุณ
+﻿using invoice_management_api.Interfaces;
+using invoice_management_api.Models;
+using InvoiceManagementDB.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 
 namespace invoice_management_api.Controllers
 {
@@ -10,83 +9,44 @@ namespace invoice_management_api.Controllers
     [ApiController]
     public class ProvincesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IProvinceService _provinceService;
 
-        public ProvincesController(AppDbContext context)
+        public ProvincesController(IProvinceService provinceService)
         {
-            _context = context;
+            _provinceService = provinceService;
         }
 
-        // 1. GET ALL: by SP
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Province>>> GetProvinces()
-        {
-            return await _context.Provinces
-                .FromSqlRaw("EXEC sp_GetAllProvinces")
-                .ToListAsync();
-        }
+        public async Task<ActionResult<IEnumerable<Province>>> GetProvinces() =>
+            Ok(await _provinceService.GetAllAsync());
 
-        // 2. GET BY ID: by SP
         [HttpGet("{id}")]
         public async Task<ActionResult<Province>> GetProvince(int id)
         {
-            var idParam = new SqlParameter("@ProvinceID", id);
-
-            var provinces = await _context.Provinces
-                .FromSqlRaw("EXEC sp_GetProvinceById @ProvinceID", idParam)
-                .ToListAsync();
-
-            var province = provinces.FirstOrDefault(); 
-
-            if (province == null) return NotFound();
-            return province;
+            var province = await _provinceService.GetByIdAsync(id);
+            return province == null ? NotFound() : Ok(province);
         }
 
-        // 3. POST: by SP
         [HttpPost]
-        public async Task<ActionResult<Province>> PostProvince(Province province)
+        public async Task<ActionResult> PostProvince(Province province)
         {
-            var nameParam = new SqlParameter("@ProvinceName", province.ProvinceName);
-            var regionParam = new SqlParameter("@RegionID", province.RegionID);
-
-            await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_InsertProvince @ProvinceName, @RegionID",
-                nameParam, regionParam);
-
-            return CreatedAtAction(nameof(GetProvince), new { id = province.ProvinceID }, province);
+            await _provinceService.CreateAsync(province);
+            return Ok(province);
         }
 
-        // 4. PUT: by SP
         [HttpPut("{id}")]
         public async Task<IActionResult> PutProvince(int id, Province province)
         {
             if (id != province.ProvinceID) return BadRequest();
-
-            var idParam = new SqlParameter("@ProvinceID", id);
-            var nameParam = new SqlParameter("@ProvinceName", province.ProvinceName);
-            var regionParam = new SqlParameter("@RegionID", province.RegionID);
-
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_UpdateProvince @ProvinceID, @ProvinceName, @RegionID",
-                idParam, nameParam, regionParam);
-
-            if (rowsAffected == 0) return NotFound();
-
-            return NoContent();
+            var rowsAffected = await _provinceService.UpdateAsync(id, province);
+            return rowsAffected == 0 ? NotFound() : NoContent();
         }
 
-        // 5. DELETE: by SP
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProvince(int id)
         {
-            var idParam = new SqlParameter("@ProvinceID", id);
-
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_DeleteProvince @ProvinceID", idParam);
-
-            if (rowsAffected == 0) return NotFound();
-
-            return NoContent();
+            var rowsAffected = await _provinceService.DeleteAsync(id);
+            return rowsAffected == 0 ? NotFound() : NoContent();
         }
     }
 }

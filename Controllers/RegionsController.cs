@@ -1,89 +1,54 @@
-﻿using InvoiceManagementDB;
+﻿using invoice_management_api.Interfaces;
 using InvoiceManagementDB.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 
-namespace invoice_management_api.Controllers
+[Route("api/[controller]")]
+[ApiController]
+public class RegionsController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class RegionsController : ControllerBase
+    private readonly IRegionService _regionService;
+
+    // ฉีด Service เข้ามาแทน DbContext
+    public RegionsController(IRegionService regionService)
     {
-        private readonly AppDbContext _context;
+        _regionService = regionService;
+    }
 
-        public RegionsController(AppDbContext context)
-        {
-            _context = context;
-        }
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Region>>> GetRegions()
+    {
+        var regions = await _regionService.GetAllAsync();
+        return Ok(regions);
+    }
 
-        // GET: api/Regions
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Region>>> GetRegions()
-        {
-            return await _context.Regions
-                .FromSqlRaw("EXEC sp_GetAllRegions")
-                .ToListAsync();
-        }
+    [HttpGet("{id}")]
+    public async Task<ActionResult<Region>> GetRegion(int id)
+    {
+        var region = await _regionService.GetByIdAsync(id);
+        if (region == null) return NotFound();
+        return Ok(region);
+    }
 
-        // GET: api/Regions/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Region>> GetRegion(int id)
-        {
-            var idParam = new SqlParameter("@RegionID", id);
+    [HttpPost]
+    public async Task<ActionResult> PostRegion(Region region)
+    {
+        await _regionService.CreateAsync(region);
+        return Ok(region);
+    }
 
-            var regions = await _context.Regions
-                .FromSqlRaw("EXEC sp_GetRegionById @RegionID", idParam)
-                .ToListAsync();
+    [HttpPut("{id}")]
+    public async Task<IActionResult> PutRegion(int id, Region region)
+    {
+        var rowsAffected = await _regionService.UpdateAsync(id, region);
+        if (rowsAffected == 0) return NotFound();
+        return NoContent();
+    }
 
-            var region = regions.FirstOrDefault();
-
-            if (region == null) return NotFound();
-            return region;
-        }
-
-        // POST: api/Regions
-        [HttpPost]
-        public async Task<ActionResult<Region>> PostRegion(Region region)
-        {
-            var nameParam = new SqlParameter("@RegionName", region.RegionName);
-
-            await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_InsertRegion @RegionName", nameParam);
-
-            return Ok(region);
-        }
-
-        // PUT: api/Regions/5 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutRegion(int id, Region region)
-        {
-            if (id != region.RegionID) return BadRequest();
-
-            var idParam = new SqlParameter("@RegionID", id);
-            var nameParam = new SqlParameter("@RegionName", region.RegionName);
-
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_UpdateRegion @RegionID, @RegionName",
-                idParam, nameParam);
-
-            if (rowsAffected == 0) return NotFound();
-
-            return NoContent();
-        }
-
-        // DELETE: api/Regions/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteRegion(int id)
-        {
-            var idParam = new SqlParameter("@RegionID", id);
-
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_DeleteRegion @RegionID", idParam);
-
-            if (rowsAffected == 0) return NotFound();
-
-            return NoContent();
-        }
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteRegion(int id)
+    {
+        var rowsAffected = await _regionService.DeleteAsync(id);
+        if (rowsAffected == 0) return NotFound();
+        return NoContent();
     }
 }

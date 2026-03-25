@@ -1,8 +1,7 @@
-﻿using InvoiceManagementDB;
+﻿using invoice_management_api.Interfaces;
+using invoice_management_api.Models;
 using InvoiceManagementDB.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 
 namespace invoice_management_api.Controllers
 {
@@ -10,44 +9,28 @@ namespace invoice_management_api.Controllers
     [ApiController]
     public class CitiesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ICityService _cityService;
 
-        public CitiesController(AppDbContext context)
+        public CitiesController(ICityService cityService)
         {
-            _context = context;
+            _cityService = cityService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<City>>> GetCities()
-        {
-            return await _context.Cities
-                .FromSqlRaw("EXEC sp_GetAllCities")
-                .ToListAsync();
-        }
+        public async Task<ActionResult<IEnumerable<City>>> GetCities() =>
+            Ok(await _cityService.GetAllAsync());
 
         [HttpGet("{id}")]
         public async Task<ActionResult<City>> GetCity(int id)
         {
-            var idParam = new SqlParameter("@CityID", id);
-            var cities = await _context.Cities
-                .FromSqlRaw("EXEC sp_GetCityById @CityID", idParam)
-                .ToListAsync();
-
-            var city = cities.FirstOrDefault();
-            if (city == null) return NotFound();
-            return city;
+            var city = await _cityService.GetByIdAsync(id);
+            return city == null ? NotFound() : Ok(city);
         }
 
         [HttpPost]
-        public async Task<ActionResult<City>> PostCity(City city)
+        public async Task<ActionResult> PostCity(City city)
         {
-            var nameParam = new SqlParameter("@CityName", city.CityName);
-            var provinceParam = new SqlParameter("@ProvinceID", city.ProvinceID);
-
-            await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_InsertCity @CityName, @ProvinceID",
-                nameParam, provinceParam);
-
+            await _cityService.CreateAsync(city);
             return Ok(city);
         }
 
@@ -55,28 +38,15 @@ namespace invoice_management_api.Controllers
         public async Task<IActionResult> PutCity(int id, City city)
         {
             if (id != city.CityID) return BadRequest();
-
-            var idParam = new SqlParameter("@CityID", id);
-            var nameParam = new SqlParameter("@CityName", city.CityName);
-            var provinceParam = new SqlParameter("@ProvinceID", city.ProvinceID);
-
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_UpdateCity @CityID, @CityName, @ProvinceID",
-                idParam, nameParam, provinceParam);
-
-            if (rowsAffected == 0) return NotFound();
-            return NoContent();
+            var rowsAffected = await _cityService.UpdateAsync(id, city);
+            return rowsAffected == 0 ? NotFound() : NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCity(int id)
         {
-            var idParam = new SqlParameter("@CityID", id);
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_DeleteCity @CityID", idParam);
-
-            if (rowsAffected == 0) return NotFound();
-            return NoContent();
+            var rowsAffected = await _cityService.DeleteAsync(id);
+            return rowsAffected == 0 ? NotFound() : NoContent();
         }
     }
 }

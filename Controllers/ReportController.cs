@@ -1,8 +1,6 @@
-﻿using invoice_management_api.Models;
-using InvoiceManagementDB;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
+using invoice_management_api.Interfaces;
+using invoice_management_api.Models;
 
 namespace invoice_management_api.Controllers
 {
@@ -10,47 +8,39 @@ namespace invoice_management_api.Controllers
     [ApiController]
     public class ReportsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IReportService _reportService;
 
-        public ReportsController(AppDbContext context)
+        public ReportsController(IReportService reportService)
         {
-            _context = context;
+            _reportService = reportService;
         }
 
-        // 1. รายงานลูกค้าพร้อมที่อยู่ละเอียด (Join 4 ตาราง)
         [HttpGet("customers")]
         public async Task<ActionResult<IEnumerable<ReportCustomer>>> GetCustomerReport()
         {
-            return await _context.ReportCustomers
-                .FromSqlRaw("EXEC sp_GetCustomerReport")
-                .ToListAsync();
+            var report = await _reportService.GetCustomerDetailsReportAsync();
+            return Ok(report);
         }
 
-        // 2. รายงานสินค้าพร้อมหมวดหมู่และผู้ผลิต (Join 4 ตาราง)
-        [HttpGet("products")]
-        public async Task<ActionResult<IEnumerable<ReportProduct>>> GetProductReport()
-        {
-            return await _context.ReportProducts
-                .FromSqlRaw("EXEC sp_GetProductReport")
-                .ToListAsync();
-        }
-
-        // 3. รายงานสรุปการสั่งซื้อ (Join 3 ตาราง)
-        [HttpGet("orders")]
-        public async Task<ActionResult<IEnumerable<ReportOrder>>> GetOrderReport()
-        {
-            return await _context.ReportOrders
-                .FromSqlRaw("EXEC sp_GetOrderReport")
-                .ToListAsync();
-        }
-
-        // 4. รายงานใบแจ้งหนี้ฉบับเต็ม (ตัวหลักของระบบ Join 4 ตาราง)
         [HttpGet("invoices")]
         public async Task<ActionResult<IEnumerable<ReportInvoice>>> GetInvoiceReport()
         {
-            return await _context.ReportInvoices
-                .FromSqlRaw("EXEC sp_GetInvoiceReport")
-                .ToListAsync();
+            var report = await _reportService.GetInvoiceFullReportAsync();
+            return Ok(report);
+        }
+
+        [HttpGet("orders")]
+        public async Task<ActionResult<IEnumerable<ReportOrder>>> GetOrderReport()
+        {
+            var report = await _reportService.GetOrderSummaryReportAsync();
+            return Ok(report);
+        }
+
+        [HttpGet("products")]
+        public async Task<ActionResult<IEnumerable<ReportProduct>>> GetProductReport()
+        {
+            var report = await _reportService.GetProductDetailsReportAsync();
+            return Ok(report);
         }
     }
 }

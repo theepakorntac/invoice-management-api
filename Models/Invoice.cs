@@ -15,6 +15,7 @@ public class Invoice
     public DateTime InvoiceDate { get; set; }
     public DateTime DueDate { get; set; }
     public DateTime? PaidDate { get; set; }
+    [Column("InvoiceStatusID")]
     public int InvoiceStatusID { get; set; }
     [ForeignKey("InvoiceStatusID")]
     [JsonIgnore]

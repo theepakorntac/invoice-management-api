@@ -1,8 +1,7 @@
-﻿using InvoiceManagementDB;
+﻿using invoice_management_api.Interfaces;
+using invoice_management_api.Models;
 using InvoiceManagementDB.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 
 namespace invoice_management_api.Controllers
 {
@@ -10,70 +9,42 @@ namespace invoice_management_api.Controllers
     [ApiController]
     public class CategoriesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ICategoryService _categoryService;
 
-        public CategoriesController(AppDbContext context)
+        public CategoriesController(ICategoryService categoryService)
         {
-            _context = context;
+            _categoryService = categoryService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
-        {
-            return await _context.Categories
-                .FromSqlRaw("EXEC sp_GetAllCategories")
-                .ToListAsync();
-        }
+        public async Task<ActionResult<IEnumerable<Category>>> GetCategories() => Ok(await _categoryService.GetAllAsync());
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Category>> GetCategory(int id)
         {
-            var idParam = new SqlParameter("@CategoryID", id);
-            var categories = await _context.Categories
-                .FromSqlRaw("EXEC sp_GetCategoryById @CategoryID", idParam)
-                .ToListAsync();
-
-            var category = categories.FirstOrDefault();
-            if (category == null) return NotFound();
-            return category;
+            var category = await _categoryService.GetByIdAsync(id);
+            return category == null ? NotFound() : Ok(category);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Category>> PostCategory(Category category)
+        public async Task<ActionResult> PostCategory(Category category)
         {
-            var p1 = new SqlParameter("@CategoryName", category.CategoryName);
-
-            await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_InsertCategory @CategoryName", p1);
-
+            await _categoryService.CreateAsync(category);
             return Ok(category);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> PutCategory(int id, Category category)
         {
-            if (id != category.CategoryID) return BadRequest();
-
-            var p0 = new SqlParameter("@CategoryID", id);
-            var p1 = new SqlParameter("@CategoryName", category.CategoryName);
-
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_UpdateCategory @CategoryID, @CategoryName",
-                p0, p1);
-
-            if (rowsAffected == 0) return NotFound();
-            return NoContent();
+            var result = await _categoryService.UpdateAsync(id, category);
+            return result == 0 ? NotFound() : NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
-            var idParam = new SqlParameter("@CategoryID", id);
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_DeleteCategory @CategoryID", idParam);
-
-            if (rowsAffected == 0) return NotFound();
-            return NoContent();
+            var result = await _categoryService.DeleteAsync(id);
+            return result == 0 ? NotFound() : NoContent();
         }
     }
 }

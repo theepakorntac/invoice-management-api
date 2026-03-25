@@ -1,8 +1,8 @@
-﻿using InvoiceManagementDB;
+﻿using invoice_management_api.Interfaces;
+using invoice_management_api.Models;
+using invoice_management_api.Services;
 using InvoiceManagementDB.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 
 namespace invoice_management_api.Controllers
 {
@@ -10,77 +10,42 @@ namespace invoice_management_api.Controllers
     [ApiController]
     public class OrdersController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IOrderService _orderService;
 
-        public OrdersController(AppDbContext context)
+        public OrdersController(IOrderService orderService)
         {
-            _context = context;
+            _orderService = orderService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Order>>> GetOrders()
-        {
-            return await _context.Orders
-                .FromSqlRaw("EXEC sp_GetAllOrders")
-                .ToListAsync();
-        }
+        public async Task<ActionResult<IEnumerable<Order>>> GetOrders() => Ok(await _orderService.GetAllAsync());
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Order>> GetOrder(int id)
         {
-            var idParam = new SqlParameter("@OrderID", id);
-            var orders = await _context.Orders
-                .FromSqlRaw("EXEC sp_GetOrderById @OrderID", idParam)
-                .ToListAsync();
-
-            var order = orders.FirstOrDefault();
-            if (order == null) return NotFound();
-            return order;
+            var order = await _orderService.GetByIdAsync(id);
+            return order == null ? NotFound() : Ok(order);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Order>> PostOrder(Order order)
+        public async Task<ActionResult> PostOrder(Order order)
         {
-            var p1 = new SqlParameter("@CustomerID", order.CustomerID);
-            var p2 = new SqlParameter("@OrderDate", order.OrderDate);
-            var p3 = new SqlParameter("@StatusID", order.StatusID);
-            var p4 = new SqlParameter("@TotalAmount", order.TotalAmount);
-
-            await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_InsertOrder @CustomerID, @OrderDate, @StatusID, @TotalAmount",
-                p1, p2, p3, p4);
-
+            await _orderService.CreateAsync(order);
             return Ok(order);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutOrder(int id, Order order)
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] int statusId)
         {
-            if (id != order.OrderID) return BadRequest();
-
-            var p0 = new SqlParameter("@OrderID", id);
-            var p1 = new SqlParameter("@CustomerID", order.CustomerID);
-            var p2 = new SqlParameter("@OrderDate", order.OrderDate);
-            var p3 = new SqlParameter("@StatusID", order.StatusID);
-            var p4 = new SqlParameter("@TotalAmount", order.TotalAmount);
-
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_UpdateOrder @OrderID, @CustomerID, @OrderDate, @StatusID, @TotalAmount",
-                p0, p1, p2, p3, p4);
-
-            if (rowsAffected == 0) return NotFound();
-            return NoContent();
+            var result = await _orderService.UpdateStatusAsync(id, statusId);
+            return result == 0 ? NotFound() : NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOrder(int id)
         {
-            var idParam = new SqlParameter("@OrderID", id);
-            var rowsAffected = await _context.Database.ExecuteSqlRawAsync(
-                "EXEC sp_DeleteOrder @OrderID", idParam);
-
-            if (rowsAffected == 0) return NotFound();
-            return NoContent();
+            var result = await _orderService.DeleteAsync(id);
+            return result == 0 ? NotFound() : NoContent();
         }
     }
 }

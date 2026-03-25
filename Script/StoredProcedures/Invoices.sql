@@ -1,28 +1,23 @@
-﻿-- 1. Get All Invoices
-CREATE PROCEDURE sp_GetAllInvoices
+﻿-- ดึงข้อมูลแบบระบุชื่อคอลัมน์ชัดเจน ป้องกัน Error
+ALTER PROCEDURE sp_GetAllInvoices
 AS
 BEGIN
-    SELECT * FROM Invoices;
+    SELECT InvoiceID, OrderID, InvoiceDate, DueDate, PaidDate, InvoiceStatusID, TotalAmount 
+    FROM Invoices;
 END
 GO
 
--- 2. Get Invoice By ID
-CREATE PROCEDURE sp_GetInvoiceById
+ALTER PROCEDURE sp_GetInvoiceById
     @InvoiceID INT
 AS
 BEGIN
-    SELECT * FROM Invoices WHERE InvoiceID = @InvoiceID;
+    SELECT InvoiceID, OrderID, InvoiceDate, DueDate, PaidDate, InvoiceStatusID, TotalAmount 
+    FROM Invoices WHERE InvoiceID = @InvoiceID;
 END
 GO
 
--- 3. Insert Invoice
-CREATE PROCEDURE sp_InsertInvoice
-    @OrderID INT,
-    @InvoiceDate DATETIME,
-    @DueDate DATETIME,
-    @PaidDate DATETIME,
-    @InvoiceStatusID INT,
-    @TotalAmount DECIMAL(18,2)
+ALTER PROCEDURE sp_InsertInvoice
+    @OrderID INT, @InvoiceDate DATETIME, @DueDate DATETIME, @PaidDate DATETIME, @InvoiceStatusID INT, @TotalAmount DECIMAL(18,2)
 AS
 BEGIN
     INSERT INTO Invoices (OrderID, InvoiceDate, DueDate, PaidDate, InvoiceStatusID, TotalAmount)
@@ -30,33 +25,12 @@ BEGIN
 END
 GO
 
--- 4. Update Invoice
-CREATE PROCEDURE sp_UpdateInvoice
-    @InvoiceID INT,
-    @OrderID INT,
-    @InvoiceDate DATETIME,
-    @DueDate DATETIME,
-    @PaidDate DATETIME,
-    @InvoiceStatusID INT,
-    @TotalAmount DECIMAL(18,2)
+ALTER PROCEDURE sp_UpdateInvoice
+    @InvoiceID INT, @OrderID INT, @InvoiceDate DATETIME, @DueDate DATETIME, @PaidDate DATETIME, @InvoiceStatusID INT, @TotalAmount DECIMAL(18,2)
 AS
 BEGIN
     UPDATE Invoices 
-    SET OrderID = @OrderID,
-        InvoiceDate = @InvoiceDate,
-        DueDate = @DueDate,
-        PaidDate = @PaidDate,
-        InvoiceStatusID = @InvoiceStatusID,
-        TotalAmount = @TotalAmount
+    SET OrderID = @OrderID, InvoiceDate = @InvoiceDate, DueDate = @DueDate, PaidDate = @PaidDate, InvoiceStatusID = @InvoiceStatusID, TotalAmount = @TotalAmount
     WHERE InvoiceID = @InvoiceID;
-END
-GO
-
--- 5. Delete Invoice
-CREATE PROCEDURE sp_DeleteInvoice
-    @InvoiceID INT
-AS
-BEGIN
-    DELETE FROM Invoices WHERE InvoiceID = @InvoiceID;
 END
 GO
