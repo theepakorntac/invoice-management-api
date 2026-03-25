@@ -30,6 +30,18 @@ The system is architected into several logical modules:
 ### 2. Database Configuration
 Update the connection string in `appsettings.json` to match your local SQL Server instance:
 ```json
-"ConnectionStrings": {
-  "DefaultConnection": "Server=.\\SQLEXPRESS;Database=InvoiceManagementDB;Trusted_Connection=True;TrustServerCertificate=True;"
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=.\\SQLEXPRESS;Database=InvoiceManagementDB;Trusted_Connection=True;TrustServerCertificate=True;"
+  }
 }
+ ```
+### 3. SP Configuration
+- Sript is exits on `Script > StoredProcedures` folder, you must run all script to create stored procedure in your database.
+
+### 4. View Configuration
+- Sript is exits on `Script > View` folder, you must run the script in file '1_viewSql' to create stored procedure in your database.
+
+Hope it's useful for you, if you have any question please let me know.
+
+glhf :)

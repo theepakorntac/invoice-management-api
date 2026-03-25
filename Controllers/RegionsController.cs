@@ -1,69 +1,54 @@
-﻿using invoice_management_api.DTOs;
-using invoice_management_api.Services;
+﻿using invoice_management_api.Interfaces;
+using InvoiceManagementDB.Models;
 using Microsoft.AspNetCore.Mvc;
 
-[ApiController]
 [Route("api/[controller]")]
+[ApiController]
 public class RegionsController : ControllerBase
 {
-    private readonly IRegionService _service;
+    private readonly IRegionService _regionService;
 
-    public RegionsController(IRegionService service)
+    // ฉีด Service เข้ามาแทน DbContext
+    public RegionsController(IRegionService regionService)
     {
-        _service = service;
+        _regionService = regionService;
     }
 
     [HttpGet]
-    public async Task<IActionResult> Get()
+    public async Task<ActionResult<IEnumerable<Region>>> GetRegions()
     {
-        return Ok(await _service.GetAllAsync());
+        var regions = await _regionService.GetAllAsync();
+        return Ok(regions);
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<ActionResult<Region>> GetRegion(int id)
     {
-        var data = await _service.GetByIdAsync(id);
-        if (data == null) return NotFound();
-
-        return Ok(data);
+        var region = await _regionService.GetByIdAsync(id);
+        if (region == null) return NotFound();
+        return Ok(region);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(RegionCreate req)
+    public async Task<ActionResult> PostRegion(Region region)
     {
-        try
-        {
-            var id = await _service.CreateAsync(req);
-            return CreatedAtAction(nameof(GetById), new { id }, null);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        await _regionService.CreateAsync(region);
+        return Ok(region);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, RegionUpdate req)
+    public async Task<IActionResult> PutRegion(int id, Region region)
     {
-        try
-        {
-            var ok = await _service.UpdateAsync(id, req);
-            if (!ok) return NotFound();
-
-            return NoContent();
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var rowsAffected = await _regionService.UpdateAsync(id, region);
+        if (rowsAffected == 0) return NotFound();
+        return NoContent();
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> DeleteRegion(int id)
     {
-        var ok = await _service.DeleteAsync(id);
-        if (!ok) return NotFound();
-
+        var rowsAffected = await _regionService.DeleteAsync(id);
+        if (rowsAffected == 0) return NotFound();
         return NoContent();
     }
 }

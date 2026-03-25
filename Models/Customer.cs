@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace InvoiceManagementDB.Models;
@@ -19,5 +20,6 @@ public class Customer
     public string? Phone { get; set; }
     public int CityID { get; set; }
     [ForeignKey("CityID")]
+    [JsonIgnore]
     public City? City { get; set; }
 }
